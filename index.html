@@ -302,6 +302,7 @@ function stopShare() {
 $('btnStop').onclick = stopShare;
 
 // ---------- 판서 모드 ----------
+try { document.getElementById('autoInk').checked = true; } catch (e) {}
 const snapC = $('snapCanvas'), inkC = $('inkCanvas');
 let snapImg = null;            // 멈춘 화면 (캔버스)
 let strokes = [];              // [{color, width, pts:[[x,y],...]}]  좌표는 0~1 비율
@@ -400,22 +401,26 @@ function pickAwayFrame(focusAt) {
 }
 
 window.addEventListener('blur', () => {
-  blurAt = Date.now();
+  const now = Date.now();
+  // 판서가 열린 직후 1초 안에 들어오는 '떠남' 신호는 윈도우 창 전환의 깜빡임 → 무시
+  if (inkOpen && autoOpenedAt && now - autoOpenedAt < 1000) return;
+  blurAt = now;
   if (inkOpen && !drawingInk) closeInk();   // 다른 창으로 가면 판서 닫기
 });
 window.addEventListener('focus', () => {
   const now = Date.now();
   if (!shareStream || !blurAt) return;
-  awayFrame = pickAwayFrame(now);
   const awayLong = now - blurAt > 700;               // 잠깐 깜빡인 것은 무시
   const settled = now - shareStartedAt > 3000;        // 공유 시작 직후 화면선택 창 닫힐 때는 무시
-  // Alt+Tab 등으로 돌아오면 바로 판서 시작 (처음에 잘 되던 방식)
-  if ($('autoInk').checked && awayLong && settled && awayFrame && !inkOpen) {
-    openInk(awayFrame, false);
-    autoOpenedAt = Date.now();
-  } else if ($('autoInk').checked && awayLong && settled && !awayFrame) {
-    inkMsg('⚠️ 다른 창에 있는 동안 화면을 저장하지 못해 판서를 켜지 못했어요. 이 문구가 보이면 알려 주세요.', true);
-  }
+  if (!awayLong || inkOpen) return;
+  awayFrame = pickAwayFrame(now);
+  const t = new Date(now).toLocaleTimeString('ko-KR');
+  if (!settled) return;
+  if (!$('autoInk').checked) { inkMsg('복귀 감지 ' + t + ' · 자동 판서가 꺼져 있어요 (체크하면 Alt+Tab으로 켜집니다)', true); return; }
+  if (!awayFrame) { inkMsg('⚠️ 복귀 감지 ' + t + ' · 다른 창에 있는 동안 화면을 저장하지 못해 판서를 켜지 못했어요. 이 문구가 보이면 알려 주세요.', true); return; }
+  openInk(awayFrame, false);
+  autoOpenedAt = Date.now();
+  inkMsg('✏️ 복귀 감지 ' + t + ' · 판서 열림');
 });
 let autoOpenedAt = 0;
 // 마우스로 클릭해서 돌아온 경우: 판서가 열린 직후(0.4초 안) 클릭이 들어오면 판서를 닫고, 그 클릭은 그리지 않음
