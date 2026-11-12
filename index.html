@@ -87,7 +87,7 @@
         <button class="danger" id="btnStop" style="display:none">공유 중지</button>
       </div>
       <label id="autoInkRow" style="display:none;margin-top:10px;font-size:14px;cursor:pointer">
-        <input type="checkbox" id="autoInk"> <b>Alt+Tab</b>으로 이 창에 돌아오면 판서 모드 켜기 (마우스로 이 창을 클릭해 돌아올 때는 켜지지 않음)
+        <input type="checkbox" id="autoInk" checked> <b>Alt+Tab</b>으로 이 창에 돌아오면 판서 모드 켜기 (마우스로 이 창을 클릭해 돌아오면 바로 닫힘)
       </label>
       <div id="codeArea" style="display:none">
         <div class="code" id="myCode">------</div>
@@ -98,8 +98,8 @@
       <ol class="help">
         <li>'화면 공유 시작' 클릭 → <b>'전체 화면'</b> 선택 → '공유'</li>
         <li>나온 코드를 전화·카톡으로 전달</li>
-        <li>설명할 창을 띄워 둔 뒤 <b>Alt+Tab</b>으로 이 창에 돌아와 <b>숫자 1</b>을 누르면 판서 모드가 켜집니다 ('판서 모드' 버튼도 가능)</li>
-        <li>바로 전 화면 위에 마우스를 누른 채 움직이면 펜으로 그려집니다</li>
+        <li>설명할 창을 띄워 둔 뒤 <b>Alt+Tab</b>으로 이 창에 돌아오면 바로 판서 모드가 켜집니다 (숫자 1 키나 '판서 모드' 버튼으로도 가능)</li>
+        <li>바로 전 화면 위에 마우스를 누른 채 움직이면 펜으로 그려집니다 (첫 획에 전체화면으로 바뀜)</li>
         <li>끝나면 <b>Esc</b> 또는 다시 <b>Alt+Tab</b> → 판서가 닫히고 원래 창으로 돌아갑니다</li>
       </ol>
     </div>
@@ -185,6 +185,7 @@ $('btnShare').onclick = async () => {
   $('btnShare').style.display = 'none';
   $('btnStop').style.display = '';
   $('btnInk').style.display = '';
+  $('autoInkRow').style.display = 'block';
   shareStartedAt = Date.now();
   startFrameBuffer();
   startShareHeartbeat();
@@ -360,16 +361,23 @@ window.addEventListener('focus', () => {
   awayFrame = pickAwayFrame(now);
   const awayLong = now - blurAt > 700;               // 잠깐 깜빡인 것은 무시
   const settled = now - shareStartedAt > 3000;        // 공유 시작 직후 화면선택 창 닫힐 때는 무시
-  // 돌아온 뒤 0.35초 기다렸다가 판서 시작. 그 사이 이 창 안에서 마우스 클릭이 있으면(클릭으로 돌아온 경우) 취소
-  clearTimeout(pendingAuto);
+  // Alt+Tab 등으로 돌아오면 바로 판서 시작 (처음에 잘 되던 방식)
   if ($('autoInk').checked && awayLong && settled && awayFrame && !inkOpen) {
-    pendingAuto = setTimeout(() => {
-      if (!inkOpen && awayFrame && shareStream && document.hasFocus()) openInk(awayFrame, false);
-    }, 350);
+    openInk(awayFrame, false);
+    autoOpenedAt = Date.now();
   } else if ($('autoInk').checked && awayLong && settled && !awayFrame) {
     setStatus($('shareStatus'), '다른 창에 있는 동안 화면을 저장하지 못해 판서를 켜지 못했어요. 이 메시지가 보이면 알려 주세요.', 'err');
   }
 });
+let autoOpenedAt = 0;
+// 마우스로 클릭해서 돌아온 경우: 판서가 열린 직후(0.4초 안) 클릭이 들어오면 판서를 닫고, 그 클릭은 그리지 않음
+document.addEventListener('pointerdown', e => {
+  if (inkOpen && autoOpenedAt && Date.now() - autoOpenedAt < 400) {
+    autoOpenedAt = 0;
+    e.preventDefault(); e.stopPropagation();
+    closeInk();
+  }
+}, true);
 let pendingAuto = null;
 
 // 숫자 1 키 → 판서 모드 (Alt+Tab으로 이 창에 온 뒤 누름. 키를 누른 것이라 바로 전체화면으로 열림)
@@ -384,8 +392,6 @@ document.addEventListener('keydown', e => {
     openInk(awayFrame, true);
   }
 });
-document.addEventListener('pointerdown', () => clearTimeout(pendingAuto), true);
-document.addEventListener('mousedown', () => clearTimeout(pendingAuto), true);
 
 function openInk(frame, gesture) {
   snapImg = frame;
