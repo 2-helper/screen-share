@@ -83,11 +83,11 @@
       <p class="desc">버튼을 누르고 보여줄 화면을 고르면 접속코드가 나옵니다. 코드를 상대방에게 알려주세요.</p>
       <div class="row">
         <button class="primary" id="btnShare">화면 공유 시작</button>
-        <button class="red" id="btnInk" style="display:none">✏️ 판서 모드</button>
+        <button class="red" id="btnInk" style="display:none">✏️ 판서 모드 (1)</button>
         <button class="danger" id="btnStop" style="display:none">공유 중지</button>
       </div>
       <label id="autoInkRow" style="display:none;margin-top:10px;font-size:14px;cursor:pointer">
-        <input type="checkbox" id="autoInk" checked> 이 창으로 돌아오면 <b>자동으로 판서 모드</b> 켜기
+        <input type="checkbox" id="autoInk"> Alt+Tab으로 돌아오면 <b>자동으로 판서 모드</b> 켜기 (마우스로 창을 클릭해 돌아올 때는 켜지지 않음)
       </label>
       <div id="codeArea" style="display:none">
         <div class="code" id="myCode">------</div>
@@ -98,8 +98,8 @@
       <ol class="help">
         <li>'화면 공유 시작' 클릭 → <b>'전체 화면'</b> 선택 → '공유'</li>
         <li>나온 코드를 전화·카톡으로 전달</li>
-        <li>설명할 창을 띄워 둔 뒤 <b>Alt+Tab</b>(또는 작업표시줄)으로 이 창에 돌아오면 바로 판서 모드가 켜집니다</li>
-        <li>바로 전 화면 위에 마우스를 누른 채 움직이면 펜으로 그려집니다 (첫 획에 전체화면으로 바뀜)</li>
+        <li>설명할 창을 띄워 둔 뒤 <b>Alt+Tab</b>으로 이 창에 돌아와 <b>숫자 1 키</b>(또는 '판서 모드' 버튼)를 누르면 판서 모드가 켜집니다</li>
+        <li>바로 전 화면 위에 마우스를 누른 채 움직이면 펜으로 그려집니다</li>
         <li>끝나면 <b>Esc</b> 또는 다시 <b>Alt+Tab</b> → 판서가 닫히고 원래 창으로 돌아갑니다</li>
       </ol>
     </div>
@@ -361,7 +361,26 @@ window.addEventListener('focus', () => {
   awayFrame = pickAwayFrame(now);
   const awayLong = now - blurAt > 700;               // 잠깐 깜빡인 것은 무시
   const settled = now - shareStartedAt > 3000;        // 공유 시작 직후 화면선택 창 닫힐 때는 무시
-  if ($('autoInk').checked && awayLong && settled && awayFrame && !inkOpen) openInk(awayFrame, false);
+  if ($('autoInk').checked && awayLong && settled && awayFrame && !inkOpen) {
+    // 마우스 클릭으로 돌아온 경우(바로 뒤에 클릭이 따라옴)는 판서를 켜지 않음
+    clearTimeout(pendingAuto);
+    pendingAuto = setTimeout(() => { if (!inkOpen && document.hasFocus()) openInk(awayFrame, false); }, 300);
+  }
+});
+let pendingAuto = null;
+document.addEventListener('pointerdown', () => clearTimeout(pendingAuto), true);
+
+// 숫자 1 키 → 판서 모드 (키를 누른 것이라 바로 전체화면 가능)
+document.addEventListener('keydown', e => {
+  if (inkOpen || !shareStream || e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;   // 입력칸에 숫자 칠 때는 무시
+  if (e.key === '1') {
+    e.preventDefault();
+    if (!awayFrame) { setStatus($('shareStatus'), '설명할 창을 먼저 띄운 뒤, 이 창으로 돌아와서 1을 눌러 주세요.', 'err'); return; }
+    clearTimeout(pendingAuto);
+    openInk(awayFrame, true);
+  }
 });
 
 function openInk(frame, gesture) {
