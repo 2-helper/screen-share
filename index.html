@@ -87,7 +87,7 @@
         <button class="danger" id="btnStop" style="display:none">공유 중지</button>
       </div>
       <label id="autoInkRow" style="display:none;margin-top:10px;font-size:14px;cursor:pointer">
-        <input type="checkbox" id="autoInk" checked> <b>Alt+Tab</b>으로 이 창에 돌아오면 판서 모드 켜기 (마우스 클릭·알림으로 돌아올 때는 켜지지 않음)
+        <input type="checkbox" id="autoInk" checked> <b>Alt+Tab</b>으로 이 창에 돌아오면 판서 모드 켜기 (마우스로 이 창을 클릭해 돌아올 때는 켜지지 않음)
       </label>
       <div id="codeArea" style="display:none">
         <div class="code" id="myCode">------</div>
@@ -361,21 +361,19 @@ window.addEventListener('focus', () => {
   awayFrame = pickAwayFrame(now);
   const awayLong = now - blurAt > 700;               // 잠깐 깜빡인 것은 무시
   const settled = now - shareStartedAt > 3000;        // 공유 시작 직후 화면선택 창 닫힐 때는 무시
-  // Alt+Tab으로 돌아온 경우에만 켜기: 돌아온 직후 Alt 키를 떼는 신호가 들어오면 판서 시작
-  autoArmed = $('autoInk').checked && awayLong && settled && !!awayFrame && !inkOpen;
-  clearTimeout(armTimer);
-  if (autoArmed) armTimer = setTimeout(() => { autoArmed = false; }, 1200);
-});
-let autoArmed = false, armTimer = null;
-document.addEventListener('keyup', e => {
-  if (!autoArmed) return;
-  if (e.key === 'Alt' || e.code === 'AltLeft' || e.code === 'AltRight') {
-    autoArmed = false; clearTimeout(armTimer);
-    if (!inkOpen && awayFrame && shareStream && document.hasFocus()) openInk(awayFrame, false);
+  // 돌아온 뒤 0.35초 기다렸다가 판서 시작. 그 사이 이 창 안에서 마우스 클릭이 있으면(클릭으로 돌아온 경우) 취소
+  clearTimeout(pendingAuto);
+  if ($('autoInk').checked && awayLong && settled && awayFrame && !inkOpen) {
+    pendingAuto = setTimeout(() => {
+      if (!inkOpen && awayFrame && shareStream && document.hasFocus()) openInk(awayFrame, false);
+    }, 350);
+  } else if ($('autoInk').checked && awayLong && settled && !awayFrame) {
+    setStatus($('shareStatus'), '다른 창에 있는 동안 화면을 저장하지 못해 판서를 켜지 못했어요. 이 메시지가 보이면 알려 주세요.', 'err');
   }
 });
-// 마우스로 클릭해서 돌아온 경우 등은 취소
-document.addEventListener('pointerdown', () => { autoArmed = false; clearTimeout(armTimer); }, true);
+let pendingAuto = null;
+document.addEventListener('pointerdown', () => clearTimeout(pendingAuto), true);
+document.addEventListener('mousedown', () => clearTimeout(pendingAuto), true);
 
 function openInk(frame, gesture) {
   snapImg = frame;
