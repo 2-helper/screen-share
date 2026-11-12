@@ -107,18 +107,18 @@
     <!-- 보는 쪽 (안내 받는 분) -->
     <div class="card">
       <h2>② 상대방 화면 보기 <span style="font-size:13px;color:#888;font-weight:normal">(안내 받는 분)</span></h2>
-      <p class="desc">전달받은 6자리 코드를 넣고 '보기'를 누르세요.</p>
+      <p class="desc">전달받은 6자리 코드를 넣고 '연결하기'를 누르세요.</p>
       <div class="row" style="margin-bottom:8px">
         <input id="nameIn" class="namein" maxlength="20" placeholder="이름 또는 대리점명 (선택)">
       </div>
       <div class="row">
         <input class="codein" id="codeIn" maxlength="6" inputmode="numeric" placeholder="000000">
-        <button class="primary" id="btnView">보기</button>
+        <button class="primary" id="btnView">연결하기</button>
       </div>
       <div class="status" id="viewStatus"></div>
       <ol class="help">
         <li>상대방이 먼저 '화면 공유 시작'을 해야 합니다</li>
-        <li>코드 입력 후 '보기' 클릭</li>
+        <li>코드 입력 후 '연결하기' 클릭</li>
         <li>화면이 뜨면 '전체화면'으로 크게 볼 수 있습니다</li>
       </ol>
     </div>
@@ -537,7 +537,7 @@ function endedByHost(msg) {
   viewEnded = true;
   clearInterval(hbView); hbView = null;
   setBadge('off', '종료됨');
-  $('endedMsg').textContent = msg + ' · 다시 보려면 새 코드를 받아 \'보기\'를 누르세요';
+  $('endedMsg').textContent = msg + ' · 다시 보려면 새 코드를 받아 \'연결하기\'를 누르세요';
   $('endedMsg').style.display = 'block';
   $('remoteVideo').srcObject = null;
   $('remoteVideo').style.display = 'none';
