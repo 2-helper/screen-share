@@ -30,6 +30,8 @@
   .status { margin-top: 12px; font-size: 14px; color: #555; min-height: 20px; }
   .status.ok { color: #1e7e34; } .status.err { color: #c0392b; }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .caution { margin-top: 14px; background: #fff8e6; border: 1px solid #f0c36d; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #6b4a00; line-height: 1.6; }
+  .caution ul { margin: 6px 0 0; padding-left: 18px; }
   ol.help { font-size: 13px; color: #555; padding-left: 18px; margin: 16px 0 0; line-height: 1.7; }
 
   /* 판서용 숨은 영상 (화면 캡처용) */
@@ -101,8 +103,16 @@
         <li>나온 코드를 전화·카톡으로 전달</li>
         <li>설명할 창을 띄워 둔 뒤 이 창으로 돌아와 <b>숫자 1 키</b> 또는 <b>'판서 모드'</b> 버튼을 누르면 판서가 시작됩니다</li>
         <li>바로 전 화면 위에 마우스를 누른 채 움직이면 펜으로 그려집니다</li>
-        <li>끝나면 <b>Esc</b> 또는 다시 <b>Alt+Tab</b> → 판서가 닫히고 원래 창으로 돌아갑니다</li>
+        <li>끝나면 <b>Esc</b> 또는 다른 창으로 이동 → 판서가 닫힙니다</li>
       </ol>
+      <div class="caution">
+        <b>⚠️ 유의사항</b>
+        <ul>
+          <li>공유할 화면을 고를 때 반드시 <b>'전체 화면'</b>을 선택하세요. '창'이나 'Chrome 탭'으로 공유하면 판서 프로그램(ZoomIt 등)으로 그린 내용이 상대방에게 보이지 않아요.</li>
+          <li>전체 화면을 공유하면 카톡 알림, 메신저 등 <b>개인 화면도 모두 보여요.</b> 공유 전에 필요 없는 창은 닫아 두세요.</li>
+          <li>모니터가 두 대라면 <b>설명할 화면이 있는 모니터</b>를 선택하세요.</li>
+        </ul>
+      </div>
     </div>
 
     <!-- 보는 쪽 (안내 받는 분) -->
