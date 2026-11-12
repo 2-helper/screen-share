@@ -129,7 +129,7 @@
       <span class="badge" id="viewBadge"><i class="dot"></i><b id="viewBadgeText">연결 중</b></span>
       <span class="sp"></span>
       <button class="ghost" id="btnFull">전체화면</button>
-      <button class="danger" id="btnLeave">보기 종료</button>
+      <button class="danger" id="btnLeave">연결 종료</button>
     </div>
     <div id="endedMsg">상대방이 화면 공유를 종료했습니다</div>
     <video id="remoteVideo" autoplay playsinline muted></video>
@@ -556,7 +556,7 @@ function leaveView(silent) {
   viewCall = null; viewPeer = null; viewConn = null;
   setTimeout(() => { try { if (c) c.close(); if (p) p.destroy(); } catch (e) {} }, 200);
   hideViewer();
-  if (!silent) setStatus($('viewStatus'), '보기를 종료했습니다.');
+  if (!silent) setStatus($('viewStatus'), '연결을 종료했습니다.');
 }
 $('btnLeave').onclick = () => leaveView(false);
 $('btnFull').onclick = () => {
