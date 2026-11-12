@@ -87,7 +87,7 @@
         <button class="danger" id="btnStop" style="display:none">공유 중지</button>
       </div>
       <label id="autoInkRow" style="display:none;margin-top:10px;font-size:14px;cursor:pointer">
-        <input type="checkbox" id="autoInk" checked> <b>Alt+Tab</b>으로 이 창에 돌아오면 판서 모드 켜기 (마우스로 이 창을 클릭해 돌아오면 바로 닫힘)
+        <input type="checkbox" id="autoInk"> <b>Alt+Tab</b>으로 이 창에 돌아오면 판서 모드 켜기 (마우스로 이 창을 클릭해 돌아오면 바로 닫힘)
       </label>
       <div id="codeArea" style="display:none">
         <div class="code" id="myCode">------</div>
@@ -99,8 +99,8 @@
       <ol class="help">
         <li>'화면 공유 시작' 클릭 → <b>'전체 화면'</b> 선택 → '공유'</li>
         <li>나온 코드를 전화·카톡으로 전달</li>
-        <li>설명할 창을 띄워 둔 뒤 <b>Alt+Tab</b>으로 이 창에 돌아오면 바로 판서 모드가 켜집니다 (숫자 1 키나 '판서 모드' 버튼으로도 가능)</li>
-        <li>바로 전 화면 위에 마우스를 누른 채 움직이면 펜으로 그려집니다 (첫 획에 전체화면으로 바뀜)</li>
+        <li>설명할 창을 띄워 둔 뒤 이 창으로 돌아와 <b>숫자 1 키</b> 또는 <b>'판서 모드'</b> 버튼을 누르면 판서가 시작됩니다</li>
+        <li>바로 전 화면 위에 마우스를 누른 채 움직이면 펜으로 그려집니다</li>
         <li>끝나면 <b>Esc</b> 또는 다시 <b>Alt+Tab</b> → 판서가 닫히고 원래 창으로 돌아갑니다</li>
       </ol>
     </div>
@@ -186,7 +186,6 @@ $('btnShare').onclick = async () => {
   $('btnShare').style.display = 'none';
   $('btnStop').style.display = '';
   $('btnInk').style.display = '';
-  $('autoInkRow').style.display = 'block';
   shareStartedAt = Date.now();
   startFrameBuffer();
   startShareHeartbeat();
@@ -302,7 +301,6 @@ function stopShare() {
 $('btnStop').onclick = stopShare;
 
 // ---------- 판서 모드 ----------
-try { document.getElementById('autoInk').checked = true; } catch (e) {}
 const snapC = $('snapCanvas'), inkC = $('inkCanvas');
 let snapImg = null;            // 멈춘 화면 (캔버스)
 let strokes = [];              // [{color, width, pts:[[x,y],...]}]  좌표는 0~1 비율
@@ -338,7 +336,7 @@ function startFrameBuffer() {
   ring = Array.from({ length: RING }, () => ({ c: document.createElement('canvas'), t: 0 }));
   ringIdx = 0; awayFrame = null; lastSaveAt = 0;
   const track = shareStream.getVideoTracks()[0];
-  inkMsg('✏️ 판서 대기 중 · 설명할 창으로 갔다가 Alt+Tab으로 돌아오면 판서가 켜집니다');
+  inkMsg('✏️ 판서 대기 중 · 설명할 창으로 갔다가 이 창으로 돌아와 1 키를 누르면 판서가 시작됩니다');
   // 1순위: 영상 프레임을 직접 읽기 (창이 뒤에 있어도 크롬이 멈추지 않음)
   if (typeof MediaStreamTrackProcessor !== 'undefined') {
     try {
@@ -413,14 +411,8 @@ window.addEventListener('focus', () => {
   const awayLong = now - blurAt > 700;               // 잠깐 깜빡인 것은 무시
   const settled = now - shareStartedAt > 3000;        // 공유 시작 직후 화면선택 창 닫힐 때는 무시
   if (!awayLong || inkOpen) return;
-  awayFrame = pickAwayFrame(now);
-  const t = new Date(now).toLocaleTimeString('ko-KR');
-  if (!settled) return;
-  if (!$('autoInk').checked) { inkMsg('복귀 감지 ' + t + ' · 자동 판서가 꺼져 있어요 (체크하면 Alt+Tab으로 켜집니다)', true); return; }
-  if (!awayFrame) { inkMsg('⚠️ 복귀 감지 ' + t + ' · 다른 창에 있는 동안 화면을 저장하지 못해 판서를 켜지 못했어요. 이 문구가 보이면 알려 주세요.', true); return; }
-  openInk(awayFrame, false);
-  autoOpenedAt = Date.now();
-  inkMsg('✏️ 복귀 감지 ' + t + ' · 판서 열림');
+  awayFrame = pickAwayFrame(now);   // 판서할 화면만 준비 (자동으로 열지 않음)
+  if (awayFrame) inkMsg('✏️ 판서 준비됨 · 숫자 1 키 또는 \'판서 모드\' 버튼을 누르면 바로 전 화면에 판서합니다');
 });
 let autoOpenedAt = 0;
 // 마우스로 클릭해서 돌아온 경우: 판서가 열린 직후(0.4초 안) 클릭이 들어오면 판서를 닫고, 그 클릭은 그리지 않음
