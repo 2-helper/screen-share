@@ -94,6 +94,7 @@
         <div style="font-size:13px;color:#666">↑ 이 6자리 코드를 상대방에게 알려주세요</div>
       </div>
       <div class="status" id="shareStatus"></div>
+      <div id="inkStatus" style="margin-top:4px;font-size:12px;color:#888;min-height:16px"></div>
       <div id="viewerList"></div>
       <ol class="help">
         <li>'화면 공유 시작' 클릭 → <b>'전체 화면'</b> 선택 → '공유'</li>
@@ -312,31 +313,78 @@ const RING = 4;
 let ring = [], ringIdx = 0, bufTimer = null, imageCap = null, grabbing = false;
 let blurAt = 0, awayFrame = null;   // awayFrame = 이 창으로 돌아오기 직전 화면
 
+let mstpRunning = false, mstpReader = null, mstpTrack = null, lastSaveAt = 0, lastInkMsgAt = 0;
+
+function inkMsg(text, bad) {
+  const el = $('inkStatus');
+  el.textContent = text;
+  el.style.color = bad ? '#c0392b' : '#888';
+}
+function saveFrame(src, w, h) {
+  const slot = ring[ringIdx];
+  if (!slot || !w || !h) return;
+  slot.c.width = w; slot.c.height = h;
+  slot.c.getContext('2d').drawImage(src, 0, 0, w, h);
+  slot.t = Date.now(); lastSaveAt = slot.t;
+  ringIdx = (ringIdx + 1) % RING;
+  if (slot.t - lastInkMsgAt > 1000) {
+    lastInkMsgAt = slot.t;
+    inkMsg('✏️ 판서 준비됨 · 다른 창 화면 저장 ' + new Date(slot.t).toLocaleTimeString('ko-KR'));
+  }
+}
+
 function startFrameBuffer() {
   ring = Array.from({ length: RING }, () => ({ c: document.createElement('canvas'), t: 0 }));
-  ringIdx = 0; awayFrame = null;
+  ringIdx = 0; awayFrame = null; lastSaveAt = 0;
   const track = shareStream.getVideoTracks()[0];
+  inkMsg('✏️ 판서 대기 중 · 설명할 창으로 갔다가 Alt+Tab으로 돌아오면 판서가 켜집니다');
+  // 1순위: 영상 프레임을 직접 읽기 (창이 뒤에 있어도 크롬이 멈추지 않음)
+  if (typeof MediaStreamTrackProcessor !== 'undefined') {
+    try {
+      mstpTrack = track.clone();
+      mstpReader = new MediaStreamTrackProcessor({ track: mstpTrack }).readable.getReader();
+      mstpRunning = true;
+      (async () => {
+        while (mstpRunning) {
+          let r;
+          try { r = await mstpReader.read(); } catch (e) { break; }
+          if (r.done) break;
+          const f = r.value;
+          try {
+            if (!document.hasFocus() && Date.now() - lastSaveAt > 200) saveFrame(f, f.displayWidth, f.displayHeight);
+          } catch (e) {} finally { f.close(); }
+        }
+      })();
+    } catch (e) { mstpRunning = false; }
+  }
+  // 2순위(보조): 0.25초마다 찍기
   imageCap = (typeof ImageCapture !== 'undefined') ? new ImageCapture(track) : null;
   bufTimer = setInterval(grabFrame, 250);
 }
-function stopFrameBuffer() { clearInterval(bufTimer); bufTimer = null; imageCap = null; ring = []; awayFrame = null; }
+function stopFrameBuffer() {
+  clearInterval(bufTimer); bufTimer = null; imageCap = null;
+  mstpRunning = false;
+  try { if (mstpReader) mstpReader.cancel(); } catch (e) {}
+  try { if (mstpTrack) mstpTrack.stop(); } catch (e) {}
+  mstpReader = null; mstpTrack = null;
+  ring = []; awayFrame = null; inkMsg('');
+}
 
+function withTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+}
 async function grabFrame() {
   if (!shareStream || grabbing || document.hasFocus()) return;  // 이 창이 앞에 있을 때는 찍지 않음
+  if (Date.now() - lastSaveAt < 200) return;                     // 1순위 방식이 잘 되고 있으면 건너뜀
   grabbing = true;
   try {
-    let src = null, w = 0, h = 0;
+    let src = null;
     if (imageCap) {
-      try { src = await imageCap.grabFrame(); w = src.width; h = src.height; } catch (e) { src = null; }
+      try { src = await withTimeout(imageCap.grabFrame(), 800); } catch (e) { src = null; }
     }
-    if (!src) { const v = $('grabVideo'); if (!v.videoWidth) return; src = v; w = v.videoWidth; h = v.videoHeight; }
-    const slot = ring[ringIdx];
-    if (!slot) return;
-    slot.c.width = w; slot.c.height = h;
-    slot.c.getContext('2d').drawImage(src, 0, 0);
-    slot.t = Date.now();
-    if (src.close) src.close();
-    ringIdx = (ringIdx + 1) % RING;
+    if (src) { saveFrame(src, src.width, src.height); if (src.close) src.close(); return; }
+    const v = $('grabVideo');
+    if (v.videoWidth) saveFrame(v, v.videoWidth, v.videoHeight);
   } finally { grabbing = false; }
 }
 
@@ -366,7 +414,7 @@ window.addEventListener('focus', () => {
     openInk(awayFrame, false);
     autoOpenedAt = Date.now();
   } else if ($('autoInk').checked && awayLong && settled && !awayFrame) {
-    setStatus($('shareStatus'), '다른 창에 있는 동안 화면을 저장하지 못해 판서를 켜지 못했어요. 이 메시지가 보이면 알려 주세요.', 'err');
+    inkMsg('⚠️ 다른 창에 있는 동안 화면을 저장하지 못해 판서를 켜지 못했어요. 이 문구가 보이면 알려 주세요.', true);
   }
 });
 let autoOpenedAt = 0;
@@ -387,7 +435,7 @@ document.addEventListener('keydown', e => {
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;   // 입력칸에 숫자 칠 때는 무시
   if (e.key === '1' || e.code === 'Numpad1') {
     e.preventDefault();
-    if (!awayFrame) { setStatus($('shareStatus'), '판서할 화면을 저장하지 못했어요. 설명할 창을 먼저 띄운 뒤 Alt+Tab으로 돌아와 1을 눌러 주세요. 계속 이 문구가 보이면 알려 주세요.', 'err'); return; }
+    if (!awayFrame) { inkMsg('⚠️ 판서할 화면을 저장하지 못했어요. 설명할 창을 먼저 띄운 뒤 Alt+Tab으로 돌아와 1을 눌러 주세요. 계속 이 문구가 보이면 알려 주세요.', true); return; }
     clearTimeout(pendingAuto);
     openInk(awayFrame, true);
   }
