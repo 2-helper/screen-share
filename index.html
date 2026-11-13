@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>화면공유 버전 3.0</title>
+<title>화면공유 버전 4.0</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
   * { box-sizing: border-box; }
@@ -32,6 +32,7 @@
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .caution { margin-top: 14px; background: #fff8e6; border: 1px solid #f0c36d; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #6b4a00; line-height: 1.6; }
   .caution ul { margin: 6px 0 0; padding-left: 18px; }
+  .caution a { color: #1f4e79; font-weight: bold; }
   ol.help { font-size: 13px; color: #555; padding-left: 18px; margin: 16px 0 0; line-height: 1.7; }
 
 
@@ -60,7 +61,7 @@
 </style>
 </head>
 <body>
-<header>화면공유 버전 3.0 <small>화면 보여주기 (원격 조작 불가)</small></header>
+<header>화면공유 버전 4.0 <small>화면 보여주기 (원격 조작 불가)</small></header>
 <main>
   <div class="notice">📌 이 링크는 PC에서 크롬이나 엣지로 열어 주세요. (휴대폰·카톡 안 브라우저에서는 작동하지 않아요)</div>
   <div class="warn" id="warn"></div>
@@ -84,12 +85,13 @@
         <li>'화면 공유 시작' 클릭 → <b>'전체 화면'</b> 선택 → '공유'</li>
         <li>나온 코드를 전화·카톡으로 전달</li>
         <li>설명할 화면을 띄워 두고 마우스 커서로 가리키며 설명하세요</li>
-        <li>판서가 필요하면 ZoomIt을 사용하세요 (아래 유의사항 참고)</li>
+        <li>판서가 필요하면 ZoomIt을 설치해서 사용하세요 (아래 유의사항 참고)</li>
       </ol>
       <div class="caution">
         <b>⚠️ 유의사항</b>
         <ul>
-          <li><b>판서는 ZoomIt을 사용하세요.</b> 설명할 화면에서 <b>Ctrl+2</b>를 누르면 그릴 수 있고, <b>Esc</b>로 끝나요.</li>
+          <li><b>판서를 원하면 ZoomIt(마이크로소프트 무료 도구)을 설치하세요.</b> <a href="https://learn.microsoft.com/sysinternals/downloads/zoomit" target="_blank" rel="noopener">ZoomIt 다운로드 페이지 열기</a> → 'Download ZoomIt' 클릭 → 압축을 푼 뒤 <b>ZoomIt</b> 파일 실행 → Agree</li>
+          <li>설치 후 설명할 화면에서 <b>Ctrl+2</b>를 누르면 그릴 수 있고, <b>Esc</b>로 끝나요.</li>
           <li><b>ZoomIt 판서는 '전체 화면'으로 공유할 때만 상대방에게 보여요.</b> 공유할 화면을 고를 때 '창'이나 'Chrome 탭'이 아닌 반드시 '전체 화면'을 선택하세요.</li>
           <li>전체 화면을 공유하면 카톡 알림, 메신저 등 <b>개인 화면도 모두 보여요.</b> 공유 전에 필요 없는 창은 닫아 두세요.</li>
           <li>모니터가 두 대라면 <b>설명할 화면이 있는 모니터</b>를 선택하세요.</li>
