@@ -34,19 +34,6 @@
   .caution ul { margin: 6px 0 0; padding-left: 18px; }
   ol.help { font-size: 13px; color: #555; padding-left: 18px; margin: 16px 0 0; line-height: 1.7; }
 
-  /* 판서용 숨은 영상 (화면 캡처용) */
-  #grabVideo { position: fixed; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
-
-  /* 판서 모드 */
-  #inkOverlay { display: none; position: fixed; inset: 0; z-index: 9999; background: #000; }
-  #inkOverlay canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  #inkCanvas { cursor: crosshair; touch-action: none; }
-  #inkBar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; align-items: center;
-            background: rgba(30,30,30,.88); padding: 8px 10px; border-radius: 10px; z-index: 2; box-shadow: 0 2px 10px rgba(0,0,0,.4); }
-  #inkBar span { color: #eee; font-size: 13px; margin: 0 6px; }
-  #inkBar button { padding: 6px 12px; font-size: 13px; }
-  .sw { width: 26px; height: 26px; padding: 0 !important; border-radius: 50% !important; border: 3px solid transparent !important; }
-  .sw.on { border-color: #fff !important; }
 
   /* 보는 쪽 */
   #viewerBox { display: none; margin-top: 20px; background: #111; border-radius: 10px; overflow: hidden; }
@@ -73,7 +60,7 @@
 </style>
 </head>
 <body>
-<header>화면공유 버전 3.0 <small>화면 보여주기 + 판서 (원격 조작 불가)</small></header>
+<header>화면공유 버전 3.0 <small>화면 보여주기 (원격 조작 불가)</small></header>
 <main>
   <div class="notice">📌 이 링크는 PC에서 크롬이나 엣지로 열어 주세요. (휴대폰·카톡 안 브라우저에서는 작동하지 않아요)</div>
   <div class="warn" id="warn"></div>
@@ -85,25 +72,19 @@
       <p class="desc">버튼을 누르고 보여줄 화면을 고르면 접속코드가 나옵니다. 코드를 상대방에게 알려주세요.</p>
       <div class="row">
         <button class="primary" id="btnShare">화면 공유 시작</button>
-        <button class="red" id="btnInk" style="display:none">✏️ 판서 모드 (1)</button>
         <button class="danger" id="btnStop" style="display:none">공유 중지</button>
       </div>
-      <label id="autoInkRow" style="display:none;margin-top:10px;font-size:14px;cursor:pointer">
-        <input type="checkbox" id="autoInk"> <b>Alt+Tab</b>으로 이 창에 돌아오면 판서 모드 켜기 (마우스로 이 창을 클릭해 돌아오면 바로 닫힘)
-      </label>
       <div id="codeArea" style="display:none">
         <div class="code" id="myCode">------</div>
         <div style="font-size:13px;color:#666">↑ 이 6자리 코드를 상대방에게 알려주세요</div>
       </div>
       <div class="status" id="shareStatus"></div>
-      <div id="inkStatus" style="margin-top:4px;font-size:12px;color:#888;min-height:16px"></div>
       <div id="viewerList"></div>
       <ol class="help">
         <li>'화면 공유 시작' 클릭 → <b>'전체 화면'</b> 선택 → '공유'</li>
         <li>나온 코드를 전화·카톡으로 전달</li>
-        <li>설명할 창을 띄워 둔 뒤 이 창으로 돌아와 <b>숫자 1 키</b> 또는 <b>'판서 모드'</b> 버튼을 누르면 판서가 시작됩니다</li>
-        <li>바로 전 화면 위에 마우스를 누른 채 움직이면 펜으로 그려집니다</li>
-        <li>끝나면 <b>Esc</b> 또는 다른 창으로 이동 → 판서가 닫힙니다</li>
+        <li>설명할 화면을 띄워 두고 마우스 커서로 가리키며 설명하세요</li>
+        <li>판서가 필요하면 ZoomIt을 사용하세요 (아래 유의사항 참고)</li>
       </ol>
       <div class="caution">
         <b>⚠️ 유의사항</b>
@@ -148,24 +129,6 @@
   </div>
 </main>
 
-<!-- 판서 모드 -->
-<video id="grabVideo" autoplay playsinline muted></video>
-<div id="inkOverlay">
-  <canvas id="snapCanvas"></canvas>
-  <canvas id="inkCanvas"></canvas>
-  <div id="inkBar">
-    <span>판서 모드 · Esc 또는 Alt+Tab으로 닫기</span>
-    <button class="sw on" data-c="#ff1e1e" style="background:#ff1e1e" title="빨강"></button>
-    <button class="sw" data-c="#1e6bff" style="background:#1e6bff" title="파랑"></button>
-    <button class="sw" data-c="#ffd400" style="background:#ffd400" title="노랑"></button>
-    <button class="ghost" id="inkThin">가늘게</button>
-    <button class="ghost" id="inkThick">굵게</button>
-    <button class="ghost" id="inkUndo">되돌리기</button>
-    <button class="ghost" id="inkClear">모두 지우기</button>
-    <button class="danger" id="inkClose">닫기 (Esc)</button>
-  </div>
-</div>
-
 <script>
 const PREFIX = 'uvr-mirror-test-';
 const $ = id => document.getElementById(id);
@@ -193,12 +156,8 @@ $('btnShare').onclick = async () => {
     shareStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always', frameRate: 15 }, audio: false });
   } catch (e) { setStatus($('shareStatus'), '화면 선택이 취소되었습니다.', 'err'); return; }
   shareStream.getVideoTracks()[0].addEventListener('ended', stopShare);
-  $('grabVideo').srcObject = shareStream;
   $('btnShare').style.display = 'none';
   $('btnStop').style.display = '';
-  $('btnInk').style.display = '';
-  shareStartedAt = Date.now();
-  startFrameBuffer();
   startShareHeartbeat();
   setStatus($('shareStatus'), '접속코드를 만드는 중...');
   openSharePeer(0);
@@ -289,7 +248,6 @@ function startShareHeartbeat() {
 }
 
 function stopShare() {
-  closeInk();
   clearInterval(hbShare); hbShare = null;
   for (const v of viewers.values()) { try { if (!v.gone && v.conn.open) v.conn.send({ t: 'bye' }); } catch (e) {} }
   const toClose = [...viewers.values()];
@@ -298,254 +256,14 @@ function stopShare() {
   activeCalls = [];
   if (shareStream) shareStream.getTracks().forEach(t => t.stop());
   shareStream = null;
-  $('grabVideo').srcObject = null;
   const p = sharePeer; sharePeer = null;
   if (p) setTimeout(() => p.destroy(), 400);   // 종료 신호가 전달될 시간을 둔 뒤 닫기
   $('btnShare').style.display = '';
   $('btnStop').style.display = 'none';
-  $('btnInk').style.display = 'none';
-  $('autoInkRow').style.display = 'none';
-  stopFrameBuffer();
   $('codeArea').style.display = 'none';
   setStatus($('shareStatus'), '공유를 중지했습니다.');
 }
 $('btnStop').onclick = stopShare;
-
-// ---------- 판서 모드 ----------
-const snapC = $('snapCanvas'), inkC = $('inkCanvas');
-let snapImg = null;            // 멈춘 화면 (캔버스)
-let strokes = [];              // [{color, width, pts:[[x,y],...]}]  좌표는 0~1 비율
-let inkColor = '#ff1e1e', inkWidth = 5, drawingInk = false, inkOpen = false, inkWasFull = false;
-let shareStartedAt = 0;
-
-// ---- 이 창이 뒤에 있는 동안 화면을 계속 찍어 두기 (돌아왔을 때 '바로 전 화면'을 쓰기 위해) ----
-const RING = 4;
-let ring = [], ringIdx = 0, bufTimer = null, imageCap = null, grabbing = false;
-let blurAt = 0, awayFrame = null;   // awayFrame = 이 창으로 돌아오기 직전 화면
-
-let mstpRunning = false, mstpReader = null, mstpTrack = null, lastSaveAt = 0, lastInkMsgAt = 0;
-
-function inkMsg(text, bad) {
-  const el = $('inkStatus');
-  el.textContent = text;
-  el.style.color = bad ? '#c0392b' : '#888';
-}
-function saveFrame(src, w, h) {
-  const slot = ring[ringIdx];
-  if (!slot || !w || !h) return;
-  slot.c.width = w; slot.c.height = h;
-  slot.c.getContext('2d').drawImage(src, 0, 0, w, h);
-  slot.t = Date.now(); lastSaveAt = slot.t;
-  ringIdx = (ringIdx + 1) % RING;
-  if (slot.t - lastInkMsgAt > 1000) {
-    lastInkMsgAt = slot.t;
-    inkMsg('✏️ 판서 준비됨 · 다른 창 화면 저장 ' + new Date(slot.t).toLocaleTimeString('ko-KR'));
-  }
-}
-
-function startFrameBuffer() {
-  ring = Array.from({ length: RING }, () => ({ c: document.createElement('canvas'), t: 0 }));
-  ringIdx = 0; awayFrame = null; lastSaveAt = 0;
-  const track = shareStream.getVideoTracks()[0];
-  inkMsg('✏️ 판서 대기 중 · 설명할 창으로 갔다가 이 창으로 돌아와 1 키를 누르면 판서가 시작됩니다');
-  // 1순위: 영상 프레임을 직접 읽기 (창이 뒤에 있어도 크롬이 멈추지 않음)
-  if (typeof MediaStreamTrackProcessor !== 'undefined') {
-    try {
-      mstpTrack = track.clone();
-      mstpReader = new MediaStreamTrackProcessor({ track: mstpTrack }).readable.getReader();
-      mstpRunning = true;
-      (async () => {
-        while (mstpRunning) {
-          let r;
-          try { r = await mstpReader.read(); } catch (e) { break; }
-          if (r.done) break;
-          const f = r.value;
-          try {
-            if (!document.hasFocus() && Date.now() - lastSaveAt > 200) saveFrame(f, f.displayWidth, f.displayHeight);
-          } catch (e) {} finally { f.close(); }
-        }
-      })();
-    } catch (e) { mstpRunning = false; }
-  }
-  // 2순위(보조): 0.25초마다 찍기
-  imageCap = (typeof ImageCapture !== 'undefined') ? new ImageCapture(track) : null;
-  bufTimer = setInterval(grabFrame, 250);
-}
-function stopFrameBuffer() {
-  clearInterval(bufTimer); bufTimer = null; imageCap = null;
-  mstpRunning = false;
-  try { if (mstpReader) mstpReader.cancel(); } catch (e) {}
-  try { if (mstpTrack) mstpTrack.stop(); } catch (e) {}
-  mstpReader = null; mstpTrack = null;
-  ring = []; awayFrame = null; inkMsg('');
-}
-
-function withTimeout(promise, ms) {
-  return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
-}
-async function grabFrame() {
-  if (!shareStream || grabbing || document.hasFocus()) return;  // 이 창이 앞에 있을 때는 찍지 않음
-  if (Date.now() - lastSaveAt < 200) return;                     // 1순위 방식이 잘 되고 있으면 건너뜀
-  grabbing = true;
-  try {
-    let src = null;
-    if (imageCap) {
-      try { src = await withTimeout(imageCap.grabFrame(), 800); } catch (e) { src = null; }
-    }
-    if (src) { saveFrame(src, src.width, src.height); if (src.close) src.close(); return; }
-    const v = $('grabVideo');
-    if (v.videoWidth) saveFrame(v, v.videoWidth, v.videoHeight);
-  } finally { grabbing = false; }
-}
-
-function pickAwayFrame(focusAt) {
-  // 돌아오기 0.2초 이전에 찍힌 것 중 가장 최근 화면 (전환 중 HTML 창이 섞이지 않게)
-  const ok = ring.filter(s => s.t && s.t <= focusAt - 200).sort((a, b) => b.t - a.t);
-  const best = ok[0] || ring.filter(s => s.t).sort((a, b) => a.t - b.t)[0];
-  if (!best) return null;
-  const copy = document.createElement('canvas');
-  copy.width = best.c.width; copy.height = best.c.height;
-  copy.getContext('2d').drawImage(best.c, 0, 0);
-  return copy;
-}
-
-window.addEventListener('blur', () => {
-  const now = Date.now();
-  // 판서가 열린 직후 1초 안에 들어오는 '떠남' 신호는 윈도우 창 전환의 깜빡임 → 무시
-  if (inkOpen && autoOpenedAt && now - autoOpenedAt < 1000) return;
-  blurAt = now;
-  if (inkOpen && !drawingInk) closeInk();   // 다른 창으로 가면 판서 닫기
-});
-window.addEventListener('focus', () => {
-  const now = Date.now();
-  if (!shareStream || !blurAt) return;
-  const awayLong = now - blurAt > 700;               // 잠깐 깜빡인 것은 무시
-  const settled = now - shareStartedAt > 3000;        // 공유 시작 직후 화면선택 창 닫힐 때는 무시
-  if (!awayLong || inkOpen) return;
-  awayFrame = pickAwayFrame(now);   // 판서할 화면만 준비 (자동으로 열지 않음)
-  if (awayFrame) inkMsg('✏️ 판서 준비됨 · 숫자 1 키 또는 \'판서 모드\' 버튼을 누르면 바로 전 화면에 판서합니다');
-});
-let autoOpenedAt = 0;
-// 마우스로 클릭해서 돌아온 경우: 판서가 열린 직후(0.4초 안) 클릭이 들어오면 판서를 닫고, 그 클릭은 그리지 않음
-document.addEventListener('pointerdown', e => {
-  if (inkOpen && autoOpenedAt && Date.now() - autoOpenedAt < 400) {
-    autoOpenedAt = 0;
-    e.preventDefault(); e.stopPropagation();
-    closeInk();
-  }
-}, true);
-let pendingAuto = null;
-
-// 숫자 1 키 → 판서 모드 (Alt+Tab으로 이 창에 온 뒤 누름. 키를 누른 것이라 바로 전체화면으로 열림)
-document.addEventListener('keydown', e => {
-  if (inkOpen || !shareStream || e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
-  const tag = (document.activeElement && document.activeElement.tagName) || '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return;   // 입력칸에 숫자 칠 때는 무시
-  if (e.key === '1' || e.code === 'Numpad1') {
-    e.preventDefault();
-    if (!awayFrame) { inkMsg('⚠️ 판서할 화면을 저장하지 못했어요. 설명할 창을 먼저 띄운 뒤 Alt+Tab으로 돌아와 1을 눌러 주세요. 계속 이 문구가 보이면 알려 주세요.', true); return; }
-    clearTimeout(pendingAuto);
-    openInk(awayFrame, true);
-  }
-});
-
-function openInk(frame, gesture) {
-  snapImg = frame;
-  strokes = [];
-  inkWasFull = false;
-  $('inkOverlay').style.display = 'block';
-  inkOpen = true;
-  if (gesture) $('inkOverlay').requestFullscreen().catch(() => {});
-  redrawInk();
-}
-
-$('btnInk').onclick = () => {
-  if (!awayFrame) {
-    setStatus($('shareStatus'), '설명할 창을 먼저 띄운 뒤, 이 창으로 돌아와서 눌러 주세요.', 'err');
-    return;
-  }
-  openInk(awayFrame, true);
-};
-
-function contain() { // 캡처 이미지가 화면에 그려지는 영역
-  const cw = inkC.clientWidth, ch = inkC.clientHeight;
-  const iw = snapImg ? snapImg.width : 16, ih = snapImg ? snapImg.height : 9;
-  const s = Math.min(cw / iw, ch / ih), w = iw * s, h = ih * s;
-  return { x: (cw - w) / 2, y: (ch - h) / 2, w, h };
-}
-function fitCanvas(c) {
-  const dpr = window.devicePixelRatio || 1;
-  const W = Math.round(c.clientWidth * dpr), H = Math.round(c.clientHeight * dpr);
-  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
-  const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  return ctx;
-}
-function redrawInk() {
-  if (!inkOpen) return;
-  const r = contain();
-  const sctx = fitCanvas(snapC);
-  sctx.fillStyle = '#000'; sctx.fillRect(0, 0, snapC.clientWidth, snapC.clientHeight);
-  if (snapImg) sctx.drawImage(snapImg, r.x, r.y, r.w, r.h);
-  const ctx = fitCanvas(inkC);
-  ctx.clearRect(0, 0, inkC.clientWidth, inkC.clientHeight);
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  for (const s of strokes) {
-    const P = s.pts.map(([x, y]) => [r.x + x * r.w, r.y + y * r.h]);
-    ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = s.width;
-    if (P.length === 1) { ctx.beginPath(); ctx.arc(P[0][0], P[0][1], s.width / 2 + 1, 0, Math.PI * 2); ctx.fill(); continue; }
-    ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]);
-    for (let i = 1; i < P.length; i++) ctx.lineTo(P[i][0], P[i][1]);
-    ctx.stroke();
-  }
-}
-function toNorm(e) {
-  const b = inkC.getBoundingClientRect(), r = contain();
-  return [(e.clientX - b.left - r.x) / r.w, (e.clientY - b.top - r.y) / r.h];
-}
-inkC.addEventListener('pointerdown', e => {
-  if (e.button !== 0) return;
-  if (!document.fullscreenElement) $('inkOverlay').requestFullscreen().catch(() => {});  // 첫 획에 전체화면
-  drawingInk = true; inkC.setPointerCapture(e.pointerId);
-  strokes.push({ color: inkColor, width: inkWidth, pts: [toNorm(e)] });
-  redrawInk();
-});
-inkC.addEventListener('pointermove', e => {
-  if (!drawingInk) return;
-  strokes[strokes.length - 1].pts.push(toNorm(e));
-  redrawInk();
-});
-const stopInkDraw = () => { drawingInk = false; };
-inkC.addEventListener('pointerup', stopInkDraw);
-inkC.addEventListener('pointercancel', stopInkDraw);
-
-document.querySelectorAll('#inkBar .sw').forEach(b => b.onclick = () => {
-  inkColor = b.dataset.c;
-  document.querySelectorAll('#inkBar .sw').forEach(x => x.classList.toggle('on', x === b));
-});
-$('inkThin').onclick = () => { inkWidth = 3; };
-$('inkThick').onclick = () => { inkWidth = 9; };
-$('inkUndo').onclick = () => { strokes.pop(); redrawInk(); };
-$('inkClear').onclick = () => { strokes = []; redrawInk(); };
-$('inkClose').onclick = closeInk;
-
-function closeInk() {
-  if (!inkOpen) return;
-  inkOpen = false; drawingInk = false; strokes = []; snapImg = null;
-  $('inkOverlay').style.display = 'none';
-  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-}
-// Esc를 누르면 전체화면이 풀리므로 판서 모드도 함께 닫기
-document.addEventListener('fullscreenchange', () => {
-  if (!inkOpen) return;
-  if (document.fullscreenElement === $('inkOverlay')) { inkWasFull = true; redrawInk(); }
-  else if (inkWasFull) closeInk();
-});
-document.addEventListener('keydown', e => {
-  if (!inkOpen) return;
-  if (e.key === 'Escape') closeInk();
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { strokes.pop(); redrawInk(); }
-});
-window.addEventListener('resize', redrawInk);
 
 // ---------- 보는 쪽 ----------
 let viewPeer = null, viewCall = null, viewConn = null, viewTimer = null, hbView = null, viewLastSeen = 0, viewEnded = false;
